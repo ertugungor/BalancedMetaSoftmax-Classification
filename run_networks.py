@@ -31,7 +31,11 @@ import higher
 
 class model ():
     
-    def __init__(self, config, data, test=False, meta_sample=False, learner=None):
+    def __init__(self, config, data, test=False, meta_sample=False, learner=None, teacher_model_path=None):
+        if teacher_model_path is not None:
+            self.teacher_model = self.load_model(teacher_model_path)
+        else:
+            self.teacher_model = None
 
         self.meta_sample = meta_sample
 
@@ -226,6 +230,8 @@ class model ():
 
             # Calculate logits with classifier
             self.logits, self.direct_memory_feature = self.networks['classifier'](self.features, centroids_)
+            if self.teacher_model is not None:
+                self.teacher_model.batch_forward(inputs)
 
     def batch_backward(self):
         # Zero out optimizer gradients
@@ -241,6 +247,9 @@ class model ():
 
     def batch_loss(self, labels):
         self.loss = 0
+        if 'DiveLoss' in self.criterions.keys():
+            if self.teacher_model is not None:
+                self.loss = self.criterions['DiveLoss'](self.logits, self.teacher_model.logits, labels)
 
         # First, apply performance loss
         if 'PerformanceLoss' in self.criterions.keys():
@@ -348,6 +357,7 @@ class model ():
                         self.meta_forward(inputs, labels, verbose=step % self.training_opt['display_step'] == 0)
                         
                     # If training, forward with loss, and no top 5 accuracy calculation
+
                     self.batch_forward(inputs, labels, 
                                        centroids=self.memory['centroids'],
                                        phase='train')

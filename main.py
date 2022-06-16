@@ -155,7 +155,8 @@ if not test_mode:
                                     meta=True)
         training_model = model(config, data, test=False, meta_sample=True, learner=learner)
     else:
-        training_model = model(config, data, test=False)
+        training_model = model(config, data, test=False, \
+            teacher_model_path="/home/user502/dev/dive/code/BalancedMetaSoftmax/logs/CIFAR100_LT/models/resnet32_balanced_softmax_imba100/latest_model_checkpoint.pth")
 
     training_model.train()
 

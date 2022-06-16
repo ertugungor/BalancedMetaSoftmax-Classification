@@ -12,7 +12,6 @@ Copyright (c) 2019, Zhongqi Miao
 All rights reserved.
 """
 
-
 import torch
 from torch.nn.modules.loss import _Loss
 import torch.nn.functional as F
