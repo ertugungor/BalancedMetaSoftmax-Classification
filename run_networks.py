@@ -31,9 +31,9 @@ import higher
 
 class model ():
     
-    def __init__(self, config, data, test=False, meta_sample=False, learner=None, teacher_model_path=None):
-        if teacher_model_path is not None:
-            self.teacher_model = self.load_model(teacher_model_path)
+    def __init__(self, config, data, test=False, meta_sample=False, learner=None, teacher_model=None):
+        if teacher_model is not None:
+            self.teacher_model = teacher_model
         else:
             self.teacher_model = None
 

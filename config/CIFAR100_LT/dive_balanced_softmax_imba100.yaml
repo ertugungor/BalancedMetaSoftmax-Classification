@@ -1,7 +1,7 @@
 coslr: false
 coslrwarmup: true
 criterions:
-  PerformanceLoss:
+  DiveLoss:
     def_file: ./loss/DiveLoss.py
     loss_params: {
         freq_path: ./cls_freq/CIFAR-100-LT_IMBA100.json,
@@ -35,7 +35,7 @@ training_opt:
   dataset: CIFAR100_LT
   display_step: 10
   feature_dim: 64
-  log_dir: ./logs/CIFAR100_LT/models/resnet32_balanced_softmax_imba100
+  log_dir: ./logs/CIFAR100_LT/models/dive_imba100
   num_classes: 100
   num_iterations: 13000
   num_workers: 4

@@ -37,6 +37,9 @@ parser.add_argument('--test_open', default=False, action='store_true')
 parser.add_argument('--output_logits', default=False)
 parser.add_argument('--model_dir', type=str, default=None)
 parser.add_argument('--save_feat', type=str, default='')
+# dive teacher model path
+parser.add_argument('--teacher_model_path', type=str, default='')
+parser.add_argument('--teacher_model_config', type=str, default='')
 
 # KNN testing parameters 
 parser.add_argument('--knn', default=False, action='store_true')
@@ -155,8 +158,13 @@ if not test_mode:
                                     meta=True)
         training_model = model(config, data, test=False, meta_sample=True, learner=learner)
     else:
-        training_model = model(config, data, test=False, \
-            teacher_model_path="/home/user502/dev/dive/code/BalancedMetaSoftmax/logs/CIFAR100_LT/models/resnet32_balanced_softmax_imba100/latest_model_checkpoint.pth")
+        if args.teacher_model_path is not None and args.teacher_model_config is not None:
+            with open(args.teacher_model_config) as f:
+                teacher_model_config = yaml.load(f)
+            teacher_model_config = update(teacher_model_config, args)
+            teacher_model = model(teacher_model_config, data, test=True)
+            teacher_model.load_model(args.teacher_model_path)
+        training_model = model(config, data, test=False, teacher_model=teacher_model)
 
     training_model.train()
 
