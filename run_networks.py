@@ -27,7 +27,7 @@ import numpy as np
 import warnings
 import pdb
 import higher
-
+from step_lr_warmup import StepLRWithWarmup
 
 class model ():
     
@@ -54,11 +54,31 @@ class model ():
         self.num_gpus = torch.cuda.device_count()
         self.do_shuffle = config['shuffle'] if 'shuffle' in config else False
 
+        print(config)
         # Compute epochs from iterations
         if self.training_opt.get('num_iterations', False):
             self.training_opt['num_epochs'] = math.ceil(self.training_opt['num_iterations'] / len(self.data['train']))
+            print("first if")
         if self.config.get('warmup_iterations', False):
             self.config['warmup_epochs'] = math.ceil(self.config['warmup_iterations'] / len(self.data['train']))
+            print("second if")
+        # 10847 / 128 = 84.74 = 85 // 128 = batch size,      85 = # of batches, 10847 = # of datapoints
+        # 5 = 425 / 85             // 5 = warmup epochs,     85 = # of batches, 425 = warmup iterations
+        # 200 = 17000 / 85         // 200 = training epochs, 85 = # of batches, 17000 = training iterations
+        print(f"warmup_iterations: {self.config['warmup_iterations']}")
+        print(f"warmup_epochs: {self.config['warmup_epochs']}")
+        print(f"len(self.data['train']: {len(self.data['train'])}")
+        print(f"num_epochs: {self.training_opt['num_epochs']}")
+        for key, value in self.data.items():
+            print(key)
+            print(len(value))
+        
+        print()
+        print(self.data['train'])
+        print(len(self.data['train'].dataset))
+        print(len(self.data['train']))
+        # if teacher_model is not None:
+        #     exit(1)
 
         # Setup logger
         self.logger = Logger(self.training_opt['log_dir'])
@@ -162,12 +182,13 @@ class model ():
         self.criterion_weights = {}
 
         for key, val in criterion_defs.items():
+            print("criterion key-value pairs")
+            print (key, val)
             def_file = val['def_file']
             loss_args = list(val['loss_params'].values())
 
             self.criterions[key] = source_import(def_file).create_loss(*loss_args).cuda()
             self.criterion_weights[key] = val['weight']
-          
             if val['optim_params']:
                 print('Initializing criterion optimizer.')
                 optim_params = val['optim_params']
@@ -197,6 +218,15 @@ class model ():
                 warmup_epochs=self.config['warmup_epochs'],
                 base_lr=self.config['base_lr'],
                 warmup_lr=self.config['warmup_lr']
+            )
+        elif self.config['warmup_and_decay']:
+            scheduler = StepLRWithWarmup(
+                optimizer=optimizer,
+                warmup_epochs=self.config['warmup_epochs'],
+                base_lr=self.config['base_lr'],
+                warmup_lr=self.config['warmup_lr'],
+                decay_epochs=self.config['decay_epochs'],
+                gamma=self.config['gamma']
             )
         else:
             scheduler = optim.lr_scheduler.StepLR(optimizer,
@@ -231,9 +261,12 @@ class model ():
             # Calculate logits with classifier
             self.logits, self.direct_memory_feature = self.networks['classifier'](self.features, centroids_)
             if self.teacher_model is not None:
-                self.teacher_model.batch_forward(inputs)
+                with torch.set_grad_enabled(False):
+                    self.teacher_model.batch_forward(inputs)
+                    # print(f"teacher logits grad in batch forward: {self.teacher_model.logits.requires_grad}")
 
     def batch_backward(self):
+        # print(f"teacher logits grad in batch backward: {self.teacher_model.logits.requires_grad}")
         # Zero out optimizer gradients
         self.model_optimizer.zero_grad()
         if self.criterion_optimizer:
@@ -334,7 +367,10 @@ class model ():
             
             # Set model modes and set scheduler
             # In training, step optimizer scheduler and set model to train() 
-            self.model_optimizer_scheduler.step()
+            # print("optimizer lrs")
+            # for param_group in self.model_optimizer.param_groups:
+            #     print(param_group['lr'])
+            # print("optimizer lrs")
             if self.criterion_optimizer:
                 self.criterion_optimizer_scheduler.step()
 
@@ -449,6 +485,10 @@ class model ():
             
             print('===> Saving checkpoint')
             self.save_latest(epoch)
+
+            self.model_optimizer_scheduler.step()
+            print(f"scheduler.last_epoch: {self.model_optimizer_scheduler.last_epoch}")
+            print(f"scheduler.last_lr: {self.model_optimizer_scheduler.get_last_lr()}")
 
         print()
         print('Training Complete.')

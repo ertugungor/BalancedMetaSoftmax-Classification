@@ -38,14 +38,14 @@ parser.add_argument('--output_logits', default=False)
 parser.add_argument('--model_dir', type=str, default=None)
 parser.add_argument('--save_feat', type=str, default='')
 # dive teacher model path
-parser.add_argument('--teacher_model_path', type=str, default='')
-parser.add_argument('--teacher_model_config', type=str, default='')
+parser.add_argument('--teacher_model_path', type=str, default=None)
+parser.add_argument('--teacher_model_config', type=str, default=None)
 
 # KNN testing parameters 
 parser.add_argument('--knn', default=False, action='store_true')
 parser.add_argument('--feat_type', type=str, default='cl2n')
 parser.add_argument('--dist_type', type=str, default='l2')
-
+parser.add_argument('--weight', type=float, default=0.5)
 # Learnable tau
 parser.add_argument('--val_as_train', default=False, action='store_true')
 
@@ -79,6 +79,9 @@ def update(config, args):
 with open(args.cfg) as f:
     config = yaml.load(f)
 config = update(config, args)
+
+if 'DiveLoss' in config['criterions']:
+    config['criterions']['DiveLoss']['loss_params']['weight'] = args.weight
 
 test_mode = args.test
 test_open = args.test_open
@@ -164,6 +167,8 @@ if not test_mode:
             teacher_model_config = update(teacher_model_config, args)
             teacher_model = model(teacher_model_config, data, test=True)
             teacher_model.load_model(args.teacher_model_path)
+        else:
+            teacher_model = None
         training_model = model(config, data, test=False, teacher_model=teacher_model)
 
     training_model.train()
