@@ -17,12 +17,16 @@ The main idea behind the proposed method DiVE is to distill the virtual examples
  1. Temperature:
 
 <p align = "center">
-<img src = "figures/temperature.png">
+<img src = "figures/temperature.png" style="width:30%; height:30%">
 </p>
 
 Temperature is a scaler for the model outputs (logits). The effect of this scaling is that the more the temperature the flatter the distribution from softmax. However, as the temperature goes to infinity, the distribution becomes uniform which does not have any useful information in terms of classification.
  
  2. Power Normalization:
+
+<p align = "center">
+<img src = "figures/power_norm.png" style="width:40%; height:40%">
+</p>
 
 Power normalization is a process for taking a non-negative number and converting it to its given power. When the input is a vector, we also normalize each element by dividing by the sum. The usage of power normalization in the DiVE is that it further adjusts the distribution. Taking power normalization with p=0.5 equals doubling the temperature. It's stated in the paper that we can use power normalization without taking temperature to an unreasonable range.
 
@@ -79,7 +83,7 @@ The environmental setup is done through docker. Also, to be able to work in the 
 
 ```bash
 cd docker
-docker build -t 502_pytorch_image .
+docker build -t dive_pytorch_image .
 ```
 
 Now we can open a container from this image inside Visual Studio Code:
