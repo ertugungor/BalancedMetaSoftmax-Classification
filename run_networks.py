@@ -34,9 +34,7 @@ class model ():
     def __init__(self, config, data, test=False, meta_sample=False, learner=None, teacher_model=None):
         if teacher_model is not None:
             self.teacher_model = teacher_model
-            # print(self.teacher_model.networks)
             for key,value in self.teacher_model.networks.items():
-                # print(key)
                 for param in value.parameters():
                     param.requires_grad = False
 
@@ -72,10 +70,7 @@ class model ():
         # 10847 / 128 = 84.74 = 85 // 128 = batch size,      85 = # of batches, 10847 = # of datapoints
         # 5 = 425 / 85             // 5 = warmup epochs,     85 = # of batches, 425 = warmup iterations
         # 200 = 17000 / 85         // 200 = training epochs, 85 = # of batches, 17000 = training iterations
-        # print(f"warmup_iterations: {self.config['warmup_iterations']}")
-        # print(f"warmup_epochs: {self.config['warmup_epochs']}")
-        # print(f"len(self.data['train']: {len(self.data['train'])}")
-        # print(f"num_epochs: {self.training_opt['num_epochs']}")
+
         for key, value in self.data.items():
             print(key)
             print(len(value))
@@ -84,8 +79,6 @@ class model ():
         print(self.data['train'])
         print(len(self.data['train'].dataset))
         print(len(self.data['train']))
-        # if teacher_model is not None:
-        #     exit(1)
 
         # Setup logger
         self.logger = Logger(self.training_opt['log_dir'])
@@ -245,19 +238,6 @@ class model ():
         '''
         This is a general single batch running function. 
         '''
-        
-        # if self.teacher_model is not None:
-        #     print("teacher model is not none")
-        #     for name, layer in self.teacher_model.networks["feat_model"].named_modules():
-        #         if (name == "module.layer2.2.conv2"):
-        #             print(layer)
-        #             print(layer.weight[5][5])
-        # else:
-        #     print("teacher model is none")
-        #     for name, layer in self.networks["feat_model"].named_modules():
-        #         if (name == "module.layer2.2.conv2"):
-        #             print(layer)
-        #             print(layer.weight[5][5])
 
         # Calculate Features
         self.features, self.feature_maps = self.networks['feat_model'](inputs)
@@ -283,11 +263,8 @@ class model ():
             if self.teacher_model is not None:
                 with torch.set_grad_enabled(False):
                     self.teacher_model.batch_forward(inputs, phase='test')
-                    # print(f"teacher logits grad in batch forward: {self.teacher_model.logits.requires_grad}")
-        # print("function end")
 
     def batch_backward(self):
-        # print(f"teacher logits grad in batch backward: {self.teacher_model.logits.requires_grad}")
         # Zero out optimizer gradients
         self.model_optimizer.zero_grad()
         if self.criterion_optimizer:
@@ -385,24 +362,11 @@ class model ():
                 model.train()
                 print(model.training)
             if self.teacher_model is not None:
-                print("teacher model logs")
                 for model in self.teacher_model.networks.values():
                     model.eval()
-                    print(model.training)
 
             torch.cuda.empty_cache()
             
-            # for key, model in self.networks.items():
-                # print(key)
-                # print(model.state_dict()['module.layer3.0.conv1.weight'])
-                # print(model.state_dict()['feat_model']['module.layer3.0.conv1.weight'])
-            # exit(1)
-
-            # mdl = self.teacher_model.networks['feat_model']
-            # print(f"teacher weight=> {mdl.state_dict()['module.layer3.0.conv1.weight'][3]}")
-            # mdl = self.networks['feat_model']
-            # print(f"weight=> {mdl.state_dict()['module.layer3.0.conv1.weight'][3]}")
-
             # Set model modes and set scheduler
             # In training, step optimizer scheduler and set model to train() 
             # print("optimizer lrs")
@@ -599,12 +563,8 @@ class model ():
         print(total_logits.size())
         probs = F.softmax(self.total_logits.detach() / temperature, dim=1)
         probs_sum = torch.sum(probs, dim=0, keepdim=True).squeeze().cpu()
-        # print(len(class_count))
-        # print(class_count)
         virtual_example_dist = {"few":0, "medium":0, "many":0}
         virtual_example_nums = {"few":0, "medium":0, "many":0}
-        # print(probs_sum)
-        # print(probs_sum.size())
 
         for idx in range(len(class_count)):
             if (class_count[idx] > 100):
