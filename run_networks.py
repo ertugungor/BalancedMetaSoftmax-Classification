@@ -34,6 +34,12 @@ class model ():
     def __init__(self, config, data, test=False, meta_sample=False, learner=None, teacher_model=None):
         if teacher_model is not None:
             self.teacher_model = teacher_model
+            # print(self.teacher_model.networks)
+            for key,value in self.teacher_model.networks.items():
+                # print(key)
+                for param in value.parameters():
+                    param.requires_grad = False
+
         else:
             self.teacher_model = None
 
@@ -62,13 +68,14 @@ class model ():
         if self.config.get('warmup_iterations', False):
             self.config['warmup_epochs'] = math.ceil(self.config['warmup_iterations'] / len(self.data['train']))
             print("second if")
+        # bbn recipe details
         # 10847 / 128 = 84.74 = 85 // 128 = batch size,      85 = # of batches, 10847 = # of datapoints
         # 5 = 425 / 85             // 5 = warmup epochs,     85 = # of batches, 425 = warmup iterations
         # 200 = 17000 / 85         // 200 = training epochs, 85 = # of batches, 17000 = training iterations
-        print(f"warmup_iterations: {self.config['warmup_iterations']}")
-        print(f"warmup_epochs: {self.config['warmup_epochs']}")
-        print(f"len(self.data['train']: {len(self.data['train'])}")
-        print(f"num_epochs: {self.training_opt['num_epochs']}")
+        # print(f"warmup_iterations: {self.config['warmup_iterations']}")
+        # print(f"warmup_epochs: {self.config['warmup_epochs']}")
+        # print(f"len(self.data['train']: {len(self.data['train'])}")
+        # print(f"num_epochs: {self.training_opt['num_epochs']}")
         for key, value in self.data.items():
             print(key)
             print(len(value))
@@ -238,6 +245,19 @@ class model ():
         '''
         This is a general single batch running function. 
         '''
+        
+        # if self.teacher_model is not None:
+        #     print("teacher model is not none")
+        #     for name, layer in self.teacher_model.networks["feat_model"].named_modules():
+        #         if (name == "module.layer2.2.conv2"):
+        #             print(layer)
+        #             print(layer.weight[5][5])
+        # else:
+        #     print("teacher model is none")
+        #     for name, layer in self.networks["feat_model"].named_modules():
+        #         if (name == "module.layer2.2.conv2"):
+        #             print(layer)
+        #             print(layer.weight[5][5])
 
         # Calculate Features
         self.features, self.feature_maps = self.networks['feat_model'](inputs)
@@ -262,8 +282,9 @@ class model ():
             self.logits, self.direct_memory_feature = self.networks['classifier'](self.features, centroids_)
             if self.teacher_model is not None:
                 with torch.set_grad_enabled(False):
-                    self.teacher_model.batch_forward(inputs)
+                    self.teacher_model.batch_forward(inputs, phase='test')
                     # print(f"teacher logits grad in batch forward: {self.teacher_model.logits.requires_grad}")
+        # print("function end")
 
     def batch_backward(self):
         # print(f"teacher logits grad in batch backward: {self.teacher_model.logits.requires_grad}")
@@ -362,9 +383,26 @@ class model ():
         for epoch in range(1, end_epoch + 1):
             for model in self.networks.values():
                 model.train()
+                print(model.training)
+            if self.teacher_model is not None:
+                print("teacher model logs")
+                for model in self.teacher_model.networks.values():
+                    model.eval()
+                    print(model.training)
 
             torch.cuda.empty_cache()
             
+            # for key, model in self.networks.items():
+                # print(key)
+                # print(model.state_dict()['module.layer3.0.conv1.weight'])
+                # print(model.state_dict()['feat_model']['module.layer3.0.conv1.weight'])
+            # exit(1)
+
+            # mdl = self.teacher_model.networks['feat_model']
+            # print(f"teacher weight=> {mdl.state_dict()['module.layer3.0.conv1.weight'][3]}")
+            # mdl = self.networks['feat_model']
+            # print(f"weight=> {mdl.state_dict()['module.layer3.0.conv1.weight'][3]}")
+
             # Set model modes and set scheduler
             # In training, step optimizer scheduler and set model to train() 
             # print("optimizer lrs")
@@ -557,7 +595,32 @@ class model ():
 
         return rsl
 
-    def eval(self, phase='val', openset=False, save_feat=False):
+    def virtual_example_dist(self, total_logits, class_count, temperature):
+        print(total_logits.size())
+        probs = F.softmax(self.total_logits.detach() / temperature, dim=1)
+        probs_sum = torch.sum(probs, dim=0, keepdim=True).squeeze().cpu()
+        # print(len(class_count))
+        # print(class_count)
+        virtual_example_dist = {"few":0, "medium":0, "many":0}
+        virtual_example_nums = {"few":0, "medium":0, "many":0}
+        # print(probs_sum)
+        # print(probs_sum.size())
+
+        for idx in range(len(class_count)):
+            if (class_count[idx] > 100):
+                virtual_example_dist["many"]+=probs_sum[idx].item()
+                virtual_example_nums["many"]+=1
+            elif (class_count[idx] >= 20):
+                virtual_example_dist["medium"]+=probs_sum[idx].item()
+                virtual_example_nums["medium"]+=1
+            else:
+                virtual_example_dist["few"]+=probs_sum[idx].item()
+                virtual_example_nums["few"]+=1
+        for key in virtual_example_dist.keys():
+            virtual_example_dist[key] = virtual_example_dist[key] / virtual_example_nums[key]
+        print(virtual_example_dist)
+
+    def eval(self, phase='val', openset=False, save_feat=False, virtual_dist_temperature=None):
 
         print_str = ['Phase: %s' % (phase)]
         print_write(print_str, self.log_file)
@@ -601,6 +664,14 @@ class model ():
                     feats_all.append(self.features.cpu().numpy())
                     labels_all.append(labels.cpu().numpy())
                     idxs_all.append(paths.numpy())
+
+        # eval run with train split meaning virtual example distribution calculation
+        if phase == 'train':
+            if virtual_dist_temperature is None:
+                print("Please pass virtual_dist_temperature parameter")
+                exit(1)
+            self.virtual_example_dist(self.total_logits, class_count(self.data["train"]), virtual_dist_temperature)
+            return
 
         if get_feat_only:
             typ = 'feat'

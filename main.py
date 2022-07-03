@@ -45,10 +45,13 @@ parser.add_argument('--teacher_model_config', type=str, default=None)
 parser.add_argument('--knn', default=False, action='store_true')
 parser.add_argument('--feat_type', type=str, default='cl2n')
 parser.add_argument('--dist_type', type=str, default='l2')
-parser.add_argument('--weight', type=float, default=0.5)
 # Learnable tau
 parser.add_argument('--val_as_train', default=False, action='store_true')
 
+parser.add_argument('--weight', type=float, default=None)
+parser.add_argument('--power_norm', type=float, default=None)
+parser.add_argument('--virtual_dist', default=False, action='store_true')
+parser.add_argument('--virtual_dist_temperature', type=int, default=None)
 args = parser.parse_args()
 
 def update(config, args):
@@ -81,12 +84,19 @@ with open(args.cfg) as f:
 config = update(config, args)
 
 if 'DiveLoss' in config['criterions']:
-    config['criterions']['DiveLoss']['loss_params']['weight'] = args.weight
+    if args.weight is not None:
+        config['criterions']['DiveLoss']['loss_params']['weight'] = args.weight
+    if args.power_norm is not None:
+        config['criterions']['DiveLoss']['loss_params']['power_norm'] = args.power_norm
 
 test_mode = args.test
 test_open = args.test_open
 if test_open:
     test_mode = True
+if args.virtual_dist:
+    test_mode = True
+    virtual_dist_temperature = args.virtual_dist_temperature
+
 output_logits = args.output_logits
 training_opt = config['training_opt']
 relatin_opt = config['memory']
@@ -212,8 +222,11 @@ else:
     else:
         saveit = False
     
-    training_model.eval(phase=test_split, openset=test_open, save_feat=saveit)
-    
+    if (args.virtual_dist):
+        training_model.eval(phase='train', openset=test_open, save_feat=saveit, virtual_dist_temperature=virtual_dist_temperature)
+    else:
+        training_model.eval(phase=test_split, openset=test_open, save_feat=saveit)
+
     if output_logits:
         training_model.output_logits(openset=test_open)
         

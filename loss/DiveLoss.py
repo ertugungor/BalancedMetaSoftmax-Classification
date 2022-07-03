@@ -1,9 +1,8 @@
 import torch
 from torch.nn.modules.loss import _Loss
 import torch.nn.functional as F
-import json
-from loss import BalancedSoftmaxLoss
 from utils import source_import
+from utils import print_write
 
 BALANCED_SOFTMAX_DEF_FILE = "/home/user502/dev/dive/BalancedMetaSoftmax-Classification/loss/BalancedSoftmaxLoss.py"
 
@@ -16,36 +15,28 @@ class DiveLoss(_Loss):
     self.balanced_softmax_loss = source_import(BALANCED_SOFTMAX_DEF_FILE).create_loss(freq_path).cuda()
 
   def forward(self, student_logits, teacher_logits, labels):
-    # print(f"teacher_logits.size: {teacher_logits.size()}")
-    # print(f"student_logits.size: {student_logits.size()}")
-    # print(f"labels.size: {labels.size()}")
-    # exit(1)
     balanced_softmax = (1-self.weight) * self.balanced_softmax_loss.forward(student_logits, labels)
     transformed_teacher_logits = self.transform_teacher_logits(teacher_logits)
     transformed_student_logits = self.transform_student_logits(student_logits)
     teacher_student_kl_div = self.weight * (self.temperature ** 2) * self.kl_div(transformed_teacher_logits, transformed_student_logits)
-    # print(f"balanced softmax loss: {balanced_softmax}")
-    # print(f"teacher_student_kl_div: {teacher_student_kl_div}")
-    # exit(1)
+
+    with open("./alternative_logs.txt", 'a') as f:
+      f.write(f"kl_div => {self.balanced_softmax_loss.forward(student_logits, labels)}\n")
+      f.write(f"bsce: => {self.kl_div(transformed_teacher_logits, transformed_student_logits)}\n")
+
     return (balanced_softmax + teacher_student_kl_div)
 
   def transform_teacher_logits(self, teacher_logits):
-    # print(f"teacher_logits: {teacher_logits[0]}")
-    temp_teacher_logits = F.softmax(teacher_logits / self.temperature, dim=1)
-    # print(f"teacher_logits after softmax: {temp_teacher_logits[0]}")
+    if self.power_norm == 1:
+      return F.softmax(teacher_logits / (self.temperature), dim=1)
+    temp_teacher_logits = F.softmax(teacher_logits / (self.temperature), dim=1)
     pow_teacher_logits = torch.pow(temp_teacher_logits, self.power_norm)
-    # print(f"teacher_logits after power: {pow_teacher_logits[0]}")
-    toret = pow_teacher_logits / torch.sum(pow_teacher_logits, dim=1, keepdim=True)
-    # print(f"teacher_logits after norm: {toret[0]}")
-    return toret
-
-    # return pow_teacher_logits / torch.sum(pow_teacher_logits)
-    # return F.softmax(teacher_logits / (self.temperature * 2), dim=1)
+    return (pow_teacher_logits / torch.sum(pow_teacher_logits, dim=1, keepdim=True))
 
   def transform_student_logits(self, student_logits):
     # print(f"student_logits: {student_logits[0]}")
-    # return F.softmax(student_logits / (self.temperature / 2), dim=1)
-    return F.softmax(student_logits / self.temperature, dim=1)
+    # return F.softmax(student_logits / (self.temperature * 3), dim=1)
+    return F.softmax(student_logits / (self.temperature), dim=1)
 
     # toret = F.softmax(student_logits / self.temperature, dim=1)
     # print(f"student_logits after softmax: {toret[0]}")
@@ -53,7 +44,7 @@ class DiveLoss(_Loss):
 
   def kl_div(self, transformed_teacher_logits, transformed_student_logits):
     # true calculation of KL(T, S) is f.kl_div(S.log(), T)
-    return F.kl_div(transformed_student_logits.log(), transformed_teacher_logits, reduction="batchmean")
+    return F.kl_div(transformed_student_logits.log(), transformed_teacher_logits, reduction="batchmean", log_target=False)
 
 def create_loss(freq_path, weight, temperature, power_norm):
   print('Loading Dive Loss..')

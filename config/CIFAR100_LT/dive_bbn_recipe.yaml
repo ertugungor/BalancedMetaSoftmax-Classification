@@ -7,7 +7,7 @@ criterions:
     loss_params: {
         freq_path: ./cls_freq/CIFAR-100-LT_IMBA100.json,
         weight: 0.5,
-        temperature: 6,
+        temperature: 9,
         power_norm: 0.5
       }
     optim_params: null
@@ -16,7 +16,7 @@ endlr: 0.0
 warmup_iterations: 425
 base_lr: 0
 warmup_lr: 0.1
-gamma: 0.1
+gamma: 0.01
 decay_epochs: [120, 160]
 last: false
 memory: {centroids: false, init_centroids: false}
@@ -24,12 +24,12 @@ model_dir: null
 networks:
   classifier:
     def_file: ./models/DotProductClassifier.py
-    optim_params: {lr: 0.05, momentum: 0.9, weight_decay: 0.0002}
+    optim_params: {lr: 0.00, momentum: 0.9, weight_decay: 0.0002}
     params: {feat_dim: 64, num_classes: 100}
   feat_model:
     def_file: ./models/ResNet32Feature.py
     fix: false
-    optim_params: {lr: 0.05, momentum: 0.9, weight_decay: 0.0002}
+    optim_params: {lr: 0.00, momentum: 0.9, weight_decay: 0.0002}
     params: {}
 shuffle: false
 training_opt:
