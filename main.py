@@ -51,7 +51,7 @@ parser.add_argument('--val_as_train', default=False, action='store_true')
 parser.add_argument('--weight', type=float, default=None)
 parser.add_argument('--power_norm', type=float, default=None)
 parser.add_argument('--virtual_dist', default=False, action='store_true')
-parser.add_argument('--virtual_dist_temperature', type=int, default=None)
+parser.add_argument('--virtual_dist_temperature', type=float, default=None)
 args = parser.parse_args()
 
 def update(config, args):
