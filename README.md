@@ -2,11 +2,11 @@
 
 This readme file is to reproduce some of the results in the paper "Distilling Virtual Examples for Long-tailed Recognition<sup>1</sup>". The repository is forked from the [official implementation](https://github.com/jiawei-ren/BalancedMetaSoftmax-Classification) of the paper "Balanced Meta-Softmax for Long-Tailed Visual Recognition<sup>2</sup>" and modified accordingly to implement the DiVE method since it is the reference model in the DiVE method.
 
-## 1. Introduction
+# 1. Introduction
 
 The paper<sup>1</sup> is published at ICCV 2021 and it proposes a method to alleviate one of the most common problems in deep learning: The performance of the models for tail classes. It's been known that DNNs (deep neural networks) rely on a great number of data points and real life does not reflect properly curated datasets usually. Thus, our DNNs struggle in rare classes whose number of data points in the dataset is small.
 
-### 1.1. Paper summary and the method
+## 1.1. Paper summary and the method
 
 The paper starts by introducing the long-tail problem and states that models trained on the long-tailed dataset are biased towards head classes. It continues with the common methods trying to solve the problem: Resampling which tries to solve the problem by oversampling the rare classes or undersampling the head classes, and reweighting which tries to weight loss value of rare classes to make the DNN learn them better, and finally decoupling which tries to learn feature and classifier networks separately. The authors make a critic here about these methods by arguing they do not provide a cross-category interaction.
 
@@ -46,7 +46,7 @@ Here,
  - $t^{\tau}$ is the student model logits with temperature and power normalization applied
  - $s^{\tau}$ is the student model logits with temperature
 
-### 1.2 Main Contributions
+## 1.2 Main Contributions
 
 The main contributions of the paper can be summarized as follows:
 
@@ -142,7 +142,7 @@ Then I tried to reproduce the virtual example distribution(left) of CIFAR-100-LT
 
 <p align = "center">
 <img src = "figures/virt_ex_dist_bsce.png" style="width:49%; height:49%">
-<img src = "figures/paper_virt_ex_dist_bsce.png" style="width:39.5%; height:39.5%">
+<img src = "figures/paper_virt_ex_dist_bsce.png" style="width:39%; height:39%">
 </p>
 <p align = "center">
 Figure-2 - Virtual Example Distribution of BSCE with different &tau; values from implementation(left) and paper(right).
@@ -165,7 +165,7 @@ Figure-3 - Accuracy results of 3 models with original BSCE training recipe(left)
 <br>
 
 <p align = "center">
-<img src = "figures/paper_cifar100lt_results.png" style="width:39.5%; height:30%">
+<img src = "figures/paper_cifar100lt_results.png" style="width:39%; height:30%">
 </p>
 <p align = "center">
 Figure-4 - Accuracy results from the paper
