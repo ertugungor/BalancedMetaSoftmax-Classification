@@ -20,27 +20,17 @@ class DiveLoss(_Loss):
     transformed_student_logits = self.transform_student_logits(student_logits)
     teacher_student_kl_div = self.weight * (self.temperature ** 2) * self.kl_div(transformed_teacher_logits, transformed_student_logits)
 
-    with open("./alternative_logs.txt", 'a') as f:
-      f.write(f"kl_div => {self.balanced_softmax_loss.forward(student_logits, labels)}\n")
-      f.write(f"bsce: => {self.kl_div(transformed_teacher_logits, transformed_student_logits)}\n")
-
     return (balanced_softmax + teacher_student_kl_div)
 
   def transform_teacher_logits(self, teacher_logits):
     if self.power_norm == 1:
-      return F.softmax(teacher_logits / (self.temperature), dim=1)
-    temp_teacher_logits = F.softmax(teacher_logits / (self.temperature), dim=1)
+      return F.softmax(teacher_logits / self.temperature, dim=1)
+    temp_teacher_logits = F.softmax(teacher_logits / self.temperature, dim=1)
     pow_teacher_logits = torch.pow(temp_teacher_logits, self.power_norm)
     return (pow_teacher_logits / torch.sum(pow_teacher_logits, dim=1, keepdim=True))
 
   def transform_student_logits(self, student_logits):
-    # print(f"student_logits: {student_logits[0]}")
-    # return F.softmax(student_logits / (self.temperature * 3), dim=1)
-    return F.softmax(student_logits / (self.temperature), dim=1)
-
-    # toret = F.softmax(student_logits / self.temperature, dim=1)
-    # print(f"student_logits after softmax: {toret[0]}")
-    # return toret
+    return F.softmax(student_logits / self.temperature, dim=1)
 
   def kl_div(self, transformed_teacher_logits, transformed_student_logits):
     # true calculation of KL(T, S) is f.kl_div(S.log(), T)

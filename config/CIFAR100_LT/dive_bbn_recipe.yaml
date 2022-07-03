@@ -7,7 +7,7 @@ criterions:
     loss_params: {
         freq_path: ./cls_freq/CIFAR-100-LT_IMBA100.json,
         weight: 0.5,
-        temperature: 9,
+        temperature: 6,
         power_norm: 0.5
       }
     optim_params: null

@@ -62,23 +62,12 @@ class model ():
         # Compute epochs from iterations
         if self.training_opt.get('num_iterations', False):
             self.training_opt['num_epochs'] = math.ceil(self.training_opt['num_iterations'] / len(self.data['train']))
-            print("first if")
         if self.config.get('warmup_iterations', False):
             self.config['warmup_epochs'] = math.ceil(self.config['warmup_iterations'] / len(self.data['train']))
-            print("second if")
         # bbn recipe details
         # 10847 / 128 = 84.74 = 85 // 128 = batch size,      85 = # of batches, 10847 = # of datapoints
         # 5 = 425 / 85             // 5 = warmup epochs,     85 = # of batches, 425 = warmup iterations
         # 200 = 17000 / 85         // 200 = training epochs, 85 = # of batches, 17000 = training iterations
-
-        for key, value in self.data.items():
-            print(key)
-            print(len(value))
-        
-        print()
-        print(self.data['train'])
-        print(len(self.data['train'].dataset))
-        print(len(self.data['train']))
 
         # Setup logger
         self.logger = Logger(self.training_opt['log_dir'])
@@ -360,7 +349,6 @@ class model ():
         for epoch in range(1, end_epoch + 1):
             for model in self.networks.values():
                 model.train()
-                print(model.training)
             if self.teacher_model is not None:
                 for model in self.teacher_model.networks.values():
                     model.eval()
